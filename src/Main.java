@@ -9,10 +9,7 @@ import java.util.Scanner;
 
 public class Main {
     private static Map<String, Medicament> medicaments = new HashMap<>();
-    private static final String CSV_FILENAME = "medicaments.csv";
-    private static final String TXT_FILENAME = "medicaments.txt";
-    private static final String JSON_FILENAME = "medicaments.json";
-    private static final String FORMAT = "json"; // ou csv, txt selon votre préférence
+    private static final String FILENAME = "medicaments.json"; // Changer ce nom de fichier pour tester différents formats
 
     public static void ajouterMedicament(Medicament medicament) {
         medicaments.put(medicament.getId(), medicament);
@@ -27,12 +24,21 @@ public class Main {
         }
     }
 
-    public static Medicament rechercherMedicament(String id) throws MedicamentNotFoundException {
+    public static Medicament rechercherMedicamentParId(String id) throws MedicamentNotFoundException {
         Medicament medicament = medicaments.get(id);
         if (medicament == null) {
             throw new MedicamentNotFoundException("Médicament avec ID " + id + " non trouvé.");
         }
         return medicament;
+    }
+
+    public static Medicament rechercherMedicamentParNom(String nom) throws MedicamentNotFoundException {
+        for (Medicament medicament : medicaments.values()) {
+            if (medicament.getNom().equalsIgnoreCase(nom)) {
+                return medicament;
+            }
+        }
+        throw new MedicamentNotFoundException("Médicament avec nom " + nom + " non trouvé.");
     }
 
     public static void afficherMedicamentsParType(Class<?> type) {
@@ -45,9 +51,10 @@ public class Main {
         }
     }
 
-    public static void modifierMedicament(String id, int nouvelleQuantite) {
+    public static void modifierMedicament(String id, String nouveauNom, int nouvelleQuantite) {
         Medicament medicament = medicaments.get(id);
         if (medicament != null) {
+            medicament.setNom(nouveauNom);
             medicament.setQuantite(nouvelleQuantite);
             sauvegarderMedicaments();
         } else {
@@ -56,24 +63,21 @@ public class Main {
     }
 
     public static void sauvegarderMedicaments() {
-        switch (FORMAT.toLowerCase()) {
-            case "csv":
-                sauvegarderEnCSV();
-                break;
-            case "txt":
-                sauvegarderEnTXT();
-                break;
-            case "json":
-                sauvegarderEnJSON();
-                break;
-            default:
-                System.out.println("Format inconnu.");
-                break;
+        if (FILENAME.endsWith(".csv")) {
+            sauvegarderEnCSV();
+        } else if (FILENAME.endsWith(".txt")) {
+            sauvegarderEnTXT();
+        } else if (FILENAME.endsWith(".json")) {
+            sauvegarderEnJSON();
+        } else if (FILENAME.endsWith(".xml")) {
+            sauvegarderEnXML();
+        } else {
+            System.err.println("Format de fichier inconnu.");
         }
     }
 
     public static void sauvegarderEnCSV() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(CSV_FILENAME))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILENAME))) {
             for (Medicament medicament : medicaments.values()) {
                 writer.write(medicament.toCSV());
                 writer.newLine();
@@ -84,7 +88,7 @@ public class Main {
     }
 
     public static void sauvegarderEnTXT() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(TXT_FILENAME))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILENAME))) {
             for (Medicament medicament : medicaments.values()) {
                 writer.write(medicament.toString());
                 writer.newLine();
@@ -111,32 +115,48 @@ public class Main {
             jsonBuilder.append("}");
         }
         jsonBuilder.append("]");
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(JSON_FILENAME))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILENAME))) {
             writer.write(jsonBuilder.toString());
         } catch (IOException e) {
             System.err.println("Erreur lors de la sauvegarde des médicaments en JSON: " + e.getMessage());
         }
     }
 
+    public static void sauvegarderEnXML() {
+        StringBuilder xmlBuilder = new StringBuilder();
+        xmlBuilder.append("<medicaments>");
+        for (Medicament medicament : medicaments.values()) {
+            xmlBuilder.append("<medicament>");
+            xmlBuilder.append("<id>").append(medicament.getId()).append("</id>");
+            xmlBuilder.append("<nom>").append(medicament.getNom()).append("</nom>");
+            xmlBuilder.append("<quantite>").append(medicament.getQuantite()).append("</quantite>");
+            xmlBuilder.append("<type>").append(medicament.getClass().getSimpleName()).append("</type>");
+            xmlBuilder.append("</medicament>");
+        }
+        xmlBuilder.append("</medicaments>");
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILENAME))) {
+            writer.write(xmlBuilder.toString());
+        } catch (IOException e) {
+            System.err.println("Erreur lors de la sauvegarde des médicaments en XML: " + e.getMessage());
+        }
+    }
+
     public static void chargerMedicaments() {
-        switch (FORMAT.toLowerCase()) {
-            case "csv":
-                chargerEnCSV();
-                break;
-            case "txt":
-                chargerEnTXT();
-                break;
-            case "json":
-                chargerEnJSON();
-                break;
-            default:
-                System.out.println("Format inconnu.");
-                break;
+        if (FILENAME.endsWith(".csv")) {
+            chargerEnCSV();
+        } else if (FILENAME.endsWith(".txt")) {
+            chargerEnTXT();
+        } else if (FILENAME.endsWith(".json")) {
+            chargerEnJSON();
+        } else if (FILENAME.endsWith(".xml")) {
+            chargerEnXML();
+        } else {
+            System.err.println("Format de fichier inconnu.");
         }
     }
 
     public static void chargerEnCSV() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(CSV_FILENAME))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILENAME))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 Medicament medicament = Medicament.fromCSV(line);
@@ -148,7 +168,7 @@ public class Main {
     }
 
     public static void chargerEnTXT() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(TXT_FILENAME))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILENAME))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split("\\|");
@@ -172,7 +192,7 @@ public class Main {
     }
 
     public static void chargerEnJSON() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(JSON_FILENAME))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILENAME))) {
             StringBuilder jsonBuilder = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
@@ -209,9 +229,9 @@ public class Main {
                         }
                     }
                     Medicament medicament;
-                    if ("VenteLibre".equals(type)) {
+                    if (type.equals("VenteLibre")) {
                         medicament = new VenteLibre(id, nom, quantite);
-                    } else if ("Ordonnance".equals(type)) {
+                    } else if (type.equals("Ordonnance")) {
                         medicament = new Ordonnance(id, nom, quantite);
                     } else {
                         continue;
@@ -219,169 +239,185 @@ public class Main {
                     medicaments.put(id, medicament);
                 }
             }
-        } catch (IOException | NumberFormatException e) {
+        } catch (IOException e) {
             System.err.println("Erreur lors du chargement des médicaments en JSON: " + e.getMessage());
         }
     }
 
-    public static void listerMedicamentsParLettre(char lettre) {
+    public static void chargerEnXML() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(FILENAME))) {
+            String line;
+            StringBuilder xmlBuilder = new StringBuilder();
+            while ((line = reader.readLine()) != null) {
+                xmlBuilder.append(line);
+            }
+            String xmlString = xmlBuilder.toString();
+            String[] medicamentsXml = xmlString.split("</medicament>");
+            for (String medicamentXml : medicamentsXml) {
+                if (medicamentXml.contains("<medicament>")) {
+                    medicamentXml = medicamentXml.substring(medicamentXml.indexOf("<medicament>") + "<medicament>".length());
+                    String id = medicamentXml.substring(medicamentXml.indexOf("<id>") + "<id>".length(), medicamentXml.indexOf("</id>"));
+                    String nom = medicamentXml.substring(medicamentXml.indexOf("<nom>") + "<nom>".length(), medicamentXml.indexOf("</nom>"));
+                    int quantite = Integer.parseInt(medicamentXml.substring(medicamentXml.indexOf("<quantite>") + "<quantite>".length(), medicamentXml.indexOf("</quantite>")));
+                    String type = medicamentXml.substring(medicamentXml.indexOf("<type>") + "<type>".length(), medicamentXml.indexOf("</type>"));
+                    Medicament medicament;
+                    if (type.equals("VenteLibre")) {
+                        medicament = new VenteLibre(id, nom, quantite);
+                    } else if (type.equals("Ordonnance")) {
+                        medicament = new Ordonnance(id, nom, quantite);
+                    } else {
+                        continue;
+                    }
+                    medicaments.put(id, medicament);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Erreur lors du chargement des médicaments en XML: " + e.getMessage());
+        }
+    }
+
+    public static void listerMedicamentsParLettre(String lettre) {
+        lettre = lettre.toLowerCase();
         System.out.println("| ID         | Nom                 | Quantité   |");
         System.out.println("|------------|---------------------|------------|");
         for (Medicament medicament : medicaments.values()) {
-            if (medicament.getNom().toUpperCase().charAt(0) == lettre) {
+            if (medicament.getNom().toLowerCase().startsWith(lettre)) {
                 System.out.println(medicament.getCouleur() + medicament + "\u001B[0m");
             }
         }
     }
 
     public static int obtenirNombreDeMedicamentsEnStock() {
-        return medicaments.size();
-    }
-
-    public static void alerterStockBas() {
+        int total = 0;
         for (Medicament medicament : medicaments.values()) {
-            if (medicament.getQuantite() < 5) {
-                System.out.println(medicament.getCouleur() + medicament + "\u001B[0m");
-            }
+            total += medicament.getQuantite();
         }
+        return total;
     }
 
-    public static void genererRapportStock() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("rapport_stock.txt"))) {
-            writer.write("| ID         | Nom                 | Quantité   |");
-            writer.newLine();
-            writer.write("|------------|---------------------|------------|");
-            writer.newLine();
-            for (Medicament medicament : medicaments.values()) {
-                writer.write(medicament.toString());
-                writer.newLine();
-            }
-        } catch (IOException e) {
-            System.err.println("Erreur lors de la génération du rapport de stock: " + e.getMessage());
-        }
-    }
-
-    public static void mettreAJourInformationsMedicament(String id, String nouveauNom, int nouvelleQuantite) {
-        Medicament medicament = medicaments.get(id);
-        if (medicament != null) {
-            medicament.setNom(nouveauNom);
-            medicament.setQuantite(nouvelleQuantite);
-            sauvegarderMedicaments();
-        } else {
-            System.err.println("Médicament avec ID " + id + " non trouvé.");
-        }
+    public static void afficherMenu() {
+        System.out.println("\n***** Menu de gestion des médicaments *****");
+        System.out.println("1. Ajouter un médicament");
+        System.out.println("2. Supprimer un médicament");
+        System.out.println("3. Rechercher un médicament par ID");
+        System.out.println("4. Rechercher un médicament par nom");
+        System.out.println("5. Afficher tous les médicaments par type");
+        System.out.println("6. Modifier un médicament");
+        System.out.println("7. Lister les médicaments par première lettre");
+        System.out.println("8. Afficher le nombre total de médicaments en stock");
+        System.out.println("9. Quitter");
+        System.out.print("Votre choix: ");
     }
 
     public static void main(String[] args) {
-        chargerMedicaments(); // Charger les médicaments au démarrage
+        chargerMedicaments();
         Scanner scanner = new Scanner(System.in);
-        boolean continuer = true;
-        while (continuer) {
+
+        while (true) {
             afficherMenu();
-            System.out.print("Choisissez une option: ");
             int choix = scanner.nextInt();
-            scanner.nextLine(); // Consommer la nouvelle ligne
-            String id, nom, nouveauNom;
-            int quantite, nouvelleQuantite, type;
+            scanner.nextLine(); // Consomme la nouvelle ligne
+
             switch (choix) {
                 case 1:
-                    System.out.print("ID du médicament: ");
-                    id = scanner.nextLine();
-                    System.out.print("Nom du médicament: ");
-                    nom = scanner.nextLine();
+                    System.out.print("ID: ");
+                    String id = scanner.nextLine();
+                    System.out.print("Nom: ");
+                    String nom = scanner.nextLine();
                     System.out.print("Quantité: ");
-                    quantite = scanner.nextInt();
-                    scanner.nextLine(); // Consommer la nouvelle ligne
-                    System.out.print("Type (1: VenteLibre, 2: Ordonnance): ");
-                    type = scanner.nextInt();
-                    scanner.nextLine(); // Consommer la nouvelle ligne
-                    Medicament medicament = (type == 1) ? new VenteLibre(id, nom, quantite) : new Ordonnance(id, nom, quantite);
+                    int quantite = scanner.nextInt();
+                    scanner.nextLine(); // Consomme la nouvelle ligne
+                    System.out.print("Type (1 pour Vente Libre, 2 pour Ordonnance): ");
+                    int type = scanner.nextInt();
+                    scanner.nextLine(); // Consomme la nouvelle ligne
+
+                    Medicament medicament;
+                    if (type == 1) {
+                        medicament = new VenteLibre(id, nom, quantite);
+                    } else if (type == 2) {
+                        medicament = new Ordonnance(id, nom, quantite);
+                    } else {
+                        System.out.println("Type invalide.");
+                        break;
+                    }
                     ajouterMedicament(medicament);
+                    System.out.println("Médicament ajouté avec succès.");
                     break;
+
                 case 2:
                     System.out.print("ID du médicament à supprimer: ");
                     id = scanner.nextLine();
                     supprimerMedicament(id);
+                    System.out.println("Médicament supprimé avec succès.");
                     break;
+
                 case 3:
                     System.out.print("ID du médicament à rechercher: ");
                     id = scanner.nextLine();
                     try {
-                        medicament = rechercherMedicament(id);
+                        medicament = rechercherMedicamentParId(id);
                         System.out.println(medicament);
                     } catch (MedicamentNotFoundException e) {
                         System.err.println(e.getMessage());
                     }
                     break;
+
                 case 4:
-                    System.out.print("Type (1: VenteLibre, 2: Ordonnance): ");
-                    type = scanner.nextInt();
-                    scanner.nextLine(); // Consommer la nouvelle ligne
-                    afficherMedicamentsParType((type == 1) ? VenteLibre.class : Ordonnance.class);
+                    System.out.print("Nom du médicament à rechercher: ");
+                    nom = scanner.nextLine();
+                    try {
+                        medicament = rechercherMedicamentParNom(nom);
+                        System.out.println(medicament);
+                    } catch (MedicamentNotFoundException e) {
+                        System.err.println(e.getMessage());
+                    }
                     break;
+
                 case 5:
+                    System.out.print("Type de médicament à afficher (1 pour Vente Libre, 2 pour Ordonnance): ");
+                    type = scanner.nextInt();
+                    scanner.nextLine(); // Consomme la nouvelle ligne
+                    if (type == 1) {
+                        afficherMedicamentsParType(VenteLibre.class);
+                    } else if (type == 2) {
+                        afficherMedicamentsParType(Ordonnance.class);
+                    } else {
+                        System.out.println("Type invalide.");
+                    }
+                    break;
+
+                case 6:
                     System.out.print("ID du médicament à modifier: ");
                     id = scanner.nextLine();
+                    System.out.print("Nouveau nom: ");
+                    String nouveauNom = scanner.nextLine();
                     System.out.print("Nouvelle quantité: ");
-                    quantite = scanner.nextInt();
-                    scanner.nextLine(); // Consommer la nouvelle ligne
-                    modifierMedicament(id, quantite);
+                    int nouvelleQuantite = scanner.nextInt();
+                    scanner.nextLine(); // Consomme la nouvelle ligne
+                    modifierMedicament(id, nouveauNom, nouvelleQuantite);
+                    System.out.println("Médicament modifié avec succès.");
                     break;
-                case 6:
-                    System.out.print("Lettre: ");
-                    char lettre = scanner.nextLine().toUpperCase().charAt(0);
+
+                case 7:
+                    System.out.print("Première lettre des médicaments à lister: ");
+                    String lettre = scanner.nextLine();
                     listerMedicamentsParLettre(lettre);
                     break;
-                case 7:
-                    System.out.println("Nombre de médicaments en stock: " + obtenirNombreDeMedicamentsEnStock());
-                    break;
+
                 case 8:
-                    alerterStockBas();
+                    int nombreTotal = obtenirNombreDeMedicamentsEnStock();
+                    System.out.println("Nombre total de médicaments en stock: " + nombreTotal);
                     break;
+
                 case 9:
-                    genererRapportStock();
-                    break;
-                case 10:
-                    System.out.print("ID du médicament à mettre à jour: ");
-                    id = scanner.nextLine();
-                    System.out.print("Nouveau nom: ");
-                    nouveauNom = scanner.nextLine();
-                    System.out.print("Nouvelle quantité: ");
-                    nouvelleQuantite = scanner.nextInt();
-                    scanner.nextLine(); // Consommer la nouvelle ligne
-                    mettreAJourInformationsMedicament(id, nouveauNom, nouvelleQuantite);
-                    break;
-                case 11:
                     sauvegarderMedicaments();
-                    break;
-                case 12:
-                    chargerMedicaments();
-                    break;
-                case 13:
-                    continuer = false;
-                    break;
+                    System.out.println("Au revoir !");
+                    scanner.close();
+                    return;
+
                 default:
-                    System.out.println("Option non reconnue. Veuillez réessayer.");
-                    break;
+                    System.out.println("Choix invalide. Veuillez réessayer.");
             }
         }
-        scanner.close();
-    }
-
-    public static void afficherMenu() {
-        System.out.println("Menu:");
-        System.out.println("1. Ajouter un médicament");
-        System.out.println("2. Supprimer un médicament");
-        System.out.println("3. Rechercher un médicament");
-        System.out.println("4. Afficher les médicaments par type");
-        System.out.println("5. Modifier la quantité d'un médicament");
-        System.out.println("6. Lister les médicaments par lettre");
-        System.out.println("7. Obtenir le nombre de médicaments en stock");
-        System.out.println("8. Alerter les stocks bas");
-        System.out.println("9. Générer un rapport de stock");
-        System.out.println("10. Mettre à jour les informations d'un médicament");
-        System.out.println("11. Sauvegarder les médicaments");
-        System.out.println("12. Charger les médicaments");
-        System.out.println("13. Quitter");
     }
 }
