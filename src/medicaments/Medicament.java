@@ -41,4 +41,7 @@ public abstract class Medicament {
     public int toCSV() {
         return 0;
     }
+
+    public void setNom(String nouveauNom) {
+    }
 }
