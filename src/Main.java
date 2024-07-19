@@ -178,22 +178,40 @@ public class Main {
             while ((line = reader.readLine()) != null) {
                 jsonBuilder.append(line);
             }
-            String json = jsonBuilder.toString();
-            if (json.startsWith("[")) {
-                json = json.substring(1, json.length() - 1);
-                String[] items = json.split("(?<=\\}),\\s*(?=\\{)");
-                for (String item : items) {
-                    item = item.trim();
-                    if (item.isEmpty()) continue;
-                    Map<String, String> jsonMap = parseJsonObject(item);
-                    String id = jsonMap.get("id");
-                    String nom = jsonMap.get("nom");
-                    int quantite = Integer.parseInt(jsonMap.get("quantite"));
-                    String type = jsonMap.get("type");
+            String jsonString = jsonBuilder.toString();
+            if (!jsonString.isEmpty()) {
+                jsonString = jsonString.substring(1, jsonString.length() - 1); // Remove [ and ]
+                String[] medicamentsJson = jsonString.split("\\},\\{");
+                for (String medicamentJson : medicamentsJson) {
+                    medicamentJson = medicamentJson.replace("{", "").replace("}", "");
+                    String[] attributes = medicamentJson.split(",");
+                    String id = null;
+                    String nom = null;
+                    int quantite = 0;
+                    String type = null;
+                    for (String attribute : attributes) {
+                        String[] keyValue = attribute.split(":");
+                        String key = keyValue[0].replace("\"", "").trim();
+                        String value = keyValue[1].replace("\"", "").trim();
+                        switch (key) {
+                            case "id":
+                                id = value;
+                                break;
+                            case "nom":
+                                nom = value;
+                                break;
+                            case "quantite":
+                                quantite = Integer.parseInt(value);
+                                break;
+                            case "type":
+                                type = value;
+                                break;
+                        }
+                    }
                     Medicament medicament;
-                    if (type.equals("VenteLibre")) {
+                    if ("VenteLibre".equals(type)) {
                         medicament = new VenteLibre(id, nom, quantite);
-                    } else if (type.equals("Ordonnance")) {
+                    } else if ("Ordonnance".equals(type)) {
                         medicament = new Ordonnance(id, nom, quantite);
                     } else {
                         continue;
@@ -201,39 +219,9 @@ public class Main {
                     medicaments.put(id, medicament);
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | NumberFormatException e) {
             System.err.println("Erreur lors du chargement des médicaments en JSON: " + e.getMessage());
         }
-    }
-
-    private static Map<String, String> parseJsonObject(String jsonObject) {
-        Map<String, String> map = new HashMap<>();
-        jsonObject = jsonObject.substring(1, jsonObject.length() - 1); // Remove curly braces
-        String[] keyValuePairs = jsonObject.split("\",");
-        for (String pair : keyValuePairs) {
-            String[] keyValue = pair.split("\":\"");
-            String key = keyValue[0].replace("\"", "").trim();
-            String value = keyValue[1].replace("\"", "").trim();
-            map.put(key, value);
-        }
-        return map;
-    }
-
-    public static void afficherMenu() {
-        System.out.println("Menu:");
-        System.out.println("1. Ajouter un médicament");
-        System.out.println("2. Supprimer un médicament");
-        System.out.println("3. Rechercher un médicament");
-        System.out.println("4. Afficher les médicaments par type");
-        System.out.println("5. Modifier un médicament");
-        System.out.println("6. Lister les médicaments par lettre");
-        System.out.println("7. Afficher le nombre de médicaments en stock");
-        System.out.println("8. Alerte de stock bas");
-        System.out.println("9. Générer un rapport de stock");
-        System.out.println("10. Mettre à jour les informations d'un médicament");
-        System.out.println("11. Sauvegarder les médicaments");
-        System.out.println("12. Charger les médicaments");
-        System.out.println("13. Quitter");
     }
 
     public static void listerMedicamentsParLettre(char lettre) {
@@ -378,5 +366,22 @@ public class Main {
             }
         }
         scanner.close();
+    }
+
+    public static void afficherMenu() {
+        System.out.println("Menu:");
+        System.out.println("1. Ajouter un médicament");
+        System.out.println("2. Supprimer un médicament");
+        System.out.println("3. Rechercher un médicament");
+        System.out.println("4. Afficher les médicaments par type");
+        System.out.println("5. Modifier la quantité d'un médicament");
+        System.out.println("6. Lister les médicaments par lettre");
+        System.out.println("7. Obtenir le nombre de médicaments en stock");
+        System.out.println("8. Alerter les stocks bas");
+        System.out.println("9. Générer un rapport de stock");
+        System.out.println("10. Mettre à jour les informations d'un médicament");
+        System.out.println("11. Sauvegarder les médicaments");
+        System.out.println("12. Charger les médicaments");
+        System.out.println("13. Quitter");
     }
 }

@@ -1,18 +1,15 @@
+
 package medicaments;
 
 public abstract class Medicament {
-    protected String id;
-    public String nom;
-    protected int quantite;
+    private String id;
+    private String nom;
+    private int quantite;
 
     public Medicament(String id, String nom, int quantite) {
         this.id = id;
         this.nom = nom;
         this.quantite = quantite;
-    }
-
-    public static Medicament fromCSV(String line) {
-        return null;
     }
 
     public String getId() {
@@ -23,6 +20,10 @@ public abstract class Medicament {
         return nom;
     }
 
+    public void setNom(String nom) {
+        this.nom = nom;
+    }
+
     public int getQuantite() {
         return quantite;
     }
@@ -31,17 +32,30 @@ public abstract class Medicament {
         this.quantite = quantite;
     }
 
+    public String getCouleur() {
+        return "";
+    }
+
     @Override
     public String toString() {
-        return String.format("| %-10s | %-20s | %-10d |", id, nom, quantite);
+        return String.format("| %-10s | %-19s | %-10d |", id, nom, quantite);
     }
 
-    public abstract String getCouleur();
-
-    public int toCSV() {
-        return 0;
+    public String toCSV() {
+        return id + "," + nom + "," + quantite + "," + getClass().getSimpleName();
     }
 
-    public void setNom(String nouveauNom) {
+    public static Medicament fromCSV(String csv) {
+        String[] parts = csv.split(",");
+        String id = parts[0];
+        String nom = parts[1];
+        int quantite = Integer.parseInt(parts[2]);
+        String type = parts[3];
+        if (type.equals("VenteLibre")) {
+            return new VenteLibre(id, nom, quantite);
+        } else if (type.equals("Ordonnance")) {
+            return new Ordonnance(id, nom, quantite);
+        }
+        throw new IllegalArgumentException("Type de médicament inconnu : " + type);
     }
 }
