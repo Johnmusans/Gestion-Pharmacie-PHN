@@ -1,15 +1,23 @@
 import medicaments.Medicament;
 import medicaments.Ordonnance;
 import medicaments.VenteLibre;
+import serializers.JsonSerializer;
+import serializers.Serializer;
+import serializers.TxtSerializer;
+import serializers.XmlSerializer;
 
-import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
 public class Main {
     private static Map<String, Medicament> medicaments = new HashMap<>();
-    private static final String FILENAME = "medicaments.json"; // Changer ce nom de fichier pour tester différents formats
+    private static final Serializer[] SERIALIZERS = {
+            new serializers.CsvSerializer(),
+            new TxtSerializer(),
+            new JsonSerializer(),
+            new XmlSerializer()
+    };
 
     public static void ajouterMedicament(Medicament medicament) {
         medicaments.put(medicament.getId(), medicament);
@@ -63,216 +71,14 @@ public class Main {
     }
 
     public static void sauvegarderMedicaments() {
-        if (FILENAME.endsWith(".csv")) {
-            sauvegarderEnCSV();
-        } else if (FILENAME.endsWith(".txt")) {
-            sauvegarderEnTXT();
-        } else if (FILENAME.endsWith(".json")) {
-            sauvegarderEnJSON();
-        } else if (FILENAME.endsWith(".xml")) {
-            sauvegarderEnXML();
-        } else {
-            System.err.println("Format de fichier inconnu.");
-        }
-    }
-
-    public static void sauvegarderEnCSV() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILENAME))) {
-            for (Medicament medicament : medicaments.values()) {
-                writer.write(medicament.toCSV());
-                writer.newLine();
-            }
-        } catch (IOException e) {
-            System.err.println("Erreur lors de la sauvegarde des médicaments en CSV: " + e.getMessage());
-        }
-    }
-
-    public static void sauvegarderEnTXT() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILENAME))) {
-            for (Medicament medicament : medicaments.values()) {
-                writer.write(medicament.toString());
-                writer.newLine();
-            }
-        } catch (IOException e) {
-            System.err.println("Erreur lors de la sauvegarde des médicaments en TXT: " + e.getMessage());
-        }
-    }
-
-    public static void sauvegarderEnJSON() {
-        StringBuilder jsonBuilder = new StringBuilder();
-        jsonBuilder.append("[");
-        boolean first = true;
-        for (Medicament medicament : medicaments.values()) {
-            if (!first) {
-                jsonBuilder.append(",");
-            }
-            first = false;
-            jsonBuilder.append("{");
-            jsonBuilder.append("\"id\":\"").append(medicament.getId()).append("\",");
-            jsonBuilder.append("\"nom\":\"").append(medicament.getNom()).append("\",");
-            jsonBuilder.append("\"quantite\":").append(medicament.getQuantite()).append(",");
-            jsonBuilder.append("\"type\":\"").append(medicament.getClass().getSimpleName()).append("\"");
-            jsonBuilder.append("}");
-        }
-        jsonBuilder.append("]");
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILENAME))) {
-            writer.write(jsonBuilder.toString());
-        } catch (IOException e) {
-            System.err.println("Erreur lors de la sauvegarde des médicaments en JSON: " + e.getMessage());
-        }
-    }
-
-    public static void sauvegarderEnXML() {
-        StringBuilder xmlBuilder = new StringBuilder();
-        xmlBuilder.append("<medicaments>");
-        for (Medicament medicament : medicaments.values()) {
-            xmlBuilder.append("<medicament>");
-            xmlBuilder.append("<id>").append(medicament.getId()).append("</id>");
-            xmlBuilder.append("<nom>").append(medicament.getNom()).append("</nom>");
-            xmlBuilder.append("<quantite>").append(medicament.getQuantite()).append("</quantite>");
-            xmlBuilder.append("<type>").append(medicament.getClass().getSimpleName()).append("</type>");
-            xmlBuilder.append("</medicament>");
-        }
-        xmlBuilder.append("</medicaments>");
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILENAME))) {
-            writer.write(xmlBuilder.toString());
-        } catch (IOException e) {
-            System.err.println("Erreur lors de la sauvegarde des médicaments en XML: " + e.getMessage());
+        for (Serializer serializer : SERIALIZERS) {
+            serializer.sauvegarder(medicaments);
         }
     }
 
     public static void chargerMedicaments() {
-        if (FILENAME.endsWith(".csv")) {
-            chargerEnCSV();
-        } else if (FILENAME.endsWith(".txt")) {
-            chargerEnTXT();
-        } else if (FILENAME.endsWith(".json")) {
-            chargerEnJSON();
-        } else if (FILENAME.endsWith(".xml")) {
-            chargerEnXML();
-        } else {
-            System.err.println("Format de fichier inconnu.");
-        }
-    }
-
-    public static void chargerEnCSV() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(FILENAME))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                Medicament medicament = Medicament.fromCSV(line);
-                medicaments.put(medicament.getId(), medicament);
-            }
-        } catch (IOException e) {
-            System.err.println("Erreur lors du chargement des médicaments en CSV: " + e.getMessage());
-        }
-    }
-
-    public static void chargerEnTXT() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(FILENAME))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split("\\|");
-                String id = parts[1].trim();
-                String nom = parts[2].trim();
-                int quantite = Integer.parseInt(parts[3].trim());
-                String type = parts[4].trim();
-                Medicament medicament;
-                if (type.equals("VenteLibre")) {
-                    medicament = new VenteLibre(id, nom, quantite);
-                } else if (type.equals("Ordonnance")) {
-                    medicament = new Ordonnance(id, nom, quantite);
-                } else {
-                    continue;
-                }
-                medicaments.put(id, medicament);
-            }
-        } catch (IOException e) {
-            System.err.println("Erreur lors du chargement des médicaments en TXT: " + e.getMessage());
-        }
-    }
-
-    public static void chargerEnJSON() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(FILENAME))) {
-            StringBuilder jsonBuilder = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                jsonBuilder.append(line);
-            }
-            String jsonString = jsonBuilder.toString();
-            if (!jsonString.isEmpty()) {
-                jsonString = jsonString.substring(1, jsonString.length() - 1); // Remove [ and ]
-                String[] medicamentsJson = jsonString.split("\\},\\{");
-                for (String medicamentJson : medicamentsJson) {
-                    medicamentJson = medicamentJson.replace("{", "").replace("}", "");
-                    String[] attributes = medicamentJson.split(",");
-                    String id = null;
-                    String nom = null;
-                    int quantite = 0;
-                    String type = null;
-                    for (String attribute : attributes) {
-                        String[] keyValue = attribute.split(":");
-                        String key = keyValue[0].replace("\"", "").trim();
-                        String value = keyValue[1].replace("\"", "").trim();
-                        switch (key) {
-                            case "id":
-                                id = value;
-                                break;
-                            case "nom":
-                                nom = value;
-                                break;
-                            case "quantite":
-                                quantite = Integer.parseInt(value);
-                                break;
-                            case "type":
-                                type = value;
-                                break;
-                        }
-                    }
-                    Medicament medicament;
-                    if (type.equals("VenteLibre")) {
-                        medicament = new VenteLibre(id, nom, quantite);
-                    } else if (type.equals("Ordonnance")) {
-                        medicament = new Ordonnance(id, nom, quantite);
-                    } else {
-                        continue;
-                    }
-                    medicaments.put(id, medicament);
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Erreur lors du chargement des médicaments en JSON: " + e.getMessage());
-        }
-    }
-
-    public static void chargerEnXML() {
-        try (BufferedReader reader = new BufferedReader(new FileReader(FILENAME))) {
-            String line;
-            StringBuilder xmlBuilder = new StringBuilder();
-            while ((line = reader.readLine()) != null) {
-                xmlBuilder.append(line);
-            }
-            String xmlString = xmlBuilder.toString();
-            String[] medicamentsXml = xmlString.split("</medicament>");
-            for (String medicamentXml : medicamentsXml) {
-                if (medicamentXml.contains("<medicament>")) {
-                    medicamentXml = medicamentXml.substring(medicamentXml.indexOf("<medicament>") + "<medicament>".length());
-                    String id = medicamentXml.substring(medicamentXml.indexOf("<id>") + "<id>".length(), medicamentXml.indexOf("</id>"));
-                    String nom = medicamentXml.substring(medicamentXml.indexOf("<nom>") + "<nom>".length(), medicamentXml.indexOf("</nom>"));
-                    int quantite = Integer.parseInt(medicamentXml.substring(medicamentXml.indexOf("<quantite>") + "<quantite>".length(), medicamentXml.indexOf("</quantite>")));
-                    String type = medicamentXml.substring(medicamentXml.indexOf("<type>") + "<type>".length(), medicamentXml.indexOf("</type>"));
-                    Medicament medicament;
-                    if (type.equals("VenteLibre")) {
-                        medicament = new VenteLibre(id, nom, quantite);
-                    } else if (type.equals("Ordonnance")) {
-                        medicament = new Ordonnance(id, nom, quantite);
-                    } else {
-                        continue;
-                    }
-                    medicaments.put(id, medicament);
-                }
-            }
-        } catch (IOException e) {
-            System.err.println("Erreur lors du chargement des médicaments en XML: " + e.getMessage());
+        for (Serializer serializer : SERIALIZERS) {
+            serializer.charger(medicaments);
         }
     }
 

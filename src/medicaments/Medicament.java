@@ -1,6 +1,10 @@
 
 package medicaments;
 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+
 public abstract class Medicament {
     private String id;
     private String nom;
@@ -10,6 +14,14 @@ public abstract class Medicament {
         this.id = id;
         this.nom = nom;
         this.quantite = quantite;
+    }
+
+    public static Medicament fromXML(Element element) {
+        return null;
+    }
+
+    public static Medicament fromTXT(String line) {
+        return null;
     }
 
     public String getId() {
@@ -58,4 +70,14 @@ public abstract class Medicament {
         }
         throw new IllegalArgumentException("Type de médicament inconnu : " + type);
     }
+
+    public int toTXT() {
+        return 0;
+    }
+
+    public Node toXML(Document doc) {
+        return null;
+    }
 }
+
+
