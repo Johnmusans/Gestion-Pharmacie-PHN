@@ -2,13 +2,17 @@ package medicaments;
 
 public abstract class Medicament {
     protected String id;
-    protected String nom;
+    public String nom;
     protected int quantite;
 
     public Medicament(String id, String nom, int quantite) {
         this.id = id;
         this.nom = nom;
         this.quantite = quantite;
+    }
+
+    public static Medicament fromCSV(String line) {
+        return null;
     }
 
     public String getId() {
@@ -33,4 +37,8 @@ public abstract class Medicament {
     }
 
     public abstract String getCouleur();
+
+    public int toCSV() {
+        return 0;
+    }
 }

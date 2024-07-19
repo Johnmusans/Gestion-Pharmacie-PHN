@@ -1,8 +1,6 @@
 import medicaments.Medicament;
 import medicaments.Ordonnance;
 import medicaments.VenteLibre;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.*;
 import java.util.HashMap;
@@ -88,17 +86,24 @@ public class Main {
     }
 
     public static void sauvegarderEnJSON() {
-        JSONArray jsonArray = new JSONArray();
+        StringBuilder jsonBuilder = new StringBuilder();
+        jsonBuilder.append("[");
+        boolean first = true;
         for (Medicament medicament : medicaments.values()) {
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.put("id", medicament.getId());
-            jsonObject.put("nom", medicament.getNom());
-            jsonObject.put("quantite", medicament.getQuantite());
-            jsonObject.put("type", medicament.getClass().getSimpleName());
-            jsonArray.put(jsonObject);
+            if (!first) {
+                jsonBuilder.append(",");
+            }
+            first = false;
+            jsonBuilder.append("{");
+            jsonBuilder.append("\"id\":\"").append(medicament.getId()).append("\",");
+            jsonBuilder.append("\"nom\":\"").append(medicament.getNom()).append("\",");
+            jsonBuilder.append("\"quantite\":").append(medicament.getQuantite()).append(",");
+            jsonBuilder.append("\"type\":\"").append(medicament.getClass().getSimpleName()).append("\"");
+            jsonBuilder.append("}");
         }
+        jsonBuilder.append("]");
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(JSON_FILENAME))) {
-            writer.write(jsonArray.toString());
+            writer.write(jsonBuilder.toString());
         } catch (IOException e) {
             System.err.println("Erreur lors de la sauvegarde des médicaments en JSON: " + e.getMessage());
         }
@@ -164,26 +169,45 @@ public class Main {
             while ((line = reader.readLine()) != null) {
                 jsonBuilder.append(line);
             }
-            JSONArray jsonArray = new JSONArray(jsonBuilder.toString());
-            for (int i = 0; i < jsonArray.length(); i++) {
-                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                String id = jsonObject.getString("id");
-                String nom = jsonObject.getString("nom");
-                int quantite = jsonObject.getInt("quantite");
-                String type = jsonObject.getString("type");
-                Medicament medicament;
-                if (type.equals("VenteLibre")) {
-                    medicament = new VenteLibre(id, nom, quantite);
-                } else if (type.equals("Ordonnance")) {
-                    medicament = new Ordonnance(id, nom, quantite);
-                } else {
-                    continue;
+            String json = jsonBuilder.toString();
+            if (json.startsWith("[")) {
+                json = json.substring(1, json.length() - 1);
+                String[] items = json.split("(?<=\\}),\\s*(?=\\{)");
+                for (String item : items) {
+                    item = item.trim();
+                    if (item.isEmpty()) continue;
+                    Map<String, String> jsonMap = parseJsonObject(item);
+                    String id = jsonMap.get("id");
+                    String nom = jsonMap.get("nom");
+                    int quantite = Integer.parseInt(jsonMap.get("quantite"));
+                    String type = jsonMap.get("type");
+                    Medicament medicament;
+                    if (type.equals("VenteLibre")) {
+                        medicament = new VenteLibre(id, nom, quantite);
+                    } else if (type.equals("Ordonnance")) {
+                        medicament = new Ordonnance(id, nom, quantite);
+                    } else {
+                        continue;
+                    }
+                    medicaments.put(id, medicament);
                 }
-                medicaments.put(id, medicament);
             }
         } catch (IOException e) {
             System.err.println("Erreur lors du chargement des médicaments en JSON: " + e.getMessage());
         }
+    }
+
+    private static Map<String, String> parseJsonObject(String jsonObject) {
+        Map<String, String> map = new HashMap<>();
+        jsonObject = jsonObject.substring(1, jsonObject.length() - 1); // Remove curly braces
+        String[] keyValuePairs = jsonObject.split("\",");
+        for (String pair : keyValuePairs) {
+            String[] keyValue = pair.split("\":\"");
+            String key = keyValue[0].replace("\"", "").trim();
+            String value = keyValue[1].replace("\"", "").trim();
+            map.put(key, value);
+        }
+        return map;
     }
 
     public static void afficherMenu() {
